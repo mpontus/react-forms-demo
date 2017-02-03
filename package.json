@@ -44,11 +44,23 @@
     "webpack": "1.14.0",
     "webpack-dev-server": "1.16.2",
     "webpack-manifest-plugin": "1.1.0",
-    "whatwg-fetch": "1.0.0"
+    "whatwg-fetch": "1.0.0",
+    "babel-polyfill": "^6.22.0",
+    "babel-preset-latest": "^6.22.0",
+    "babel-preset-react": "^6.22.0",
+    "babel-preset-stage-0": "^6.22.0"
   },
   "dependencies": {
+    "classnames": "^2.2.5",
+    "flexboxgrid": "^6.3.1",
+    "material-ui": "^0.16.7",
     "react": "^15.4.2",
-    "react-dom": "^15.4.2"
+    "react-dom": "^15.4.2",
+    "react-flexbox-grid": "^0.10.2",
+    "react-redux": "^5.0.2",
+    "react-tap-event-plugin": "^2.0.1",
+    "redux": "^3.6.0",
+    "redux-form": "^6.5.0"
   },
   "scripts": {
     "start": "node scripts/start.js",
@@ -81,7 +93,9 @@
   },
   "babel": {
     "presets": [
-      "react-app"
+      "latest",
+      "react",
+      "stage-0"
     ]
   },
   "eslintConfig": {
