@@ -49,7 +49,7 @@ const Label = ({ style, ...params }) =>
 class App extends Component {
   render() {
     return (
-        <Grid>
+        <div>
           <Card>
             <CardText>
               <Row>
@@ -176,7 +176,7 @@ class App extends Component {
               <RaisedButton style={styles.button} icon={<Add/>} label="Add" />
             </CardText>
           </Card>
-        </Grid>
+        </div>
     );
   }
 }
