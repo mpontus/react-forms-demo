@@ -1,10 +1,12 @@
 import React, { Component, PropTypes, Children } from 'react'
 import { connect } from 'react-redux'
-import { reduxForm, formValueSelector } from 'redux-form'
+import { reduxForm, formValueSelector } from 'redux-form/immutable'
 import { TextField, Checkbox } from 'internals/redux-form-material-ui'
 
 import { Row, Col } from 'react-flexbox-grid'
 import { Card, CardText } from 'material-ui'
+
+const REPLICATION_FLAG_FIELD_NAME = 'copy'
 
 const styles = {
     label: {
@@ -13,88 +15,124 @@ const styles = {
     }
 }
 
-class ReplicableField extends Component {
+class ReplicatingField extends Component {
     static propTypes = {
         target: PropTypes.string,
-        enabled: PropTypes.bool,
-        disabled: PropTypes.bool,
-        // reduxForm's change
         formChange: PropTypes.func,
-    }
-
-    get isEnabled() {
-        if (this.props.enabled === undefined && this.props.disabled === undefined) {
-            return true
-        }
-        if (this.props.enabled === undefined) {
-            return !this.props.disabled
-        }
-        if (this.props.disabled === undefined) {
-            return this.props.enabled
-        }
-        return this.props.enabled && !this.props.disabled
-    }
+    };
 
     render() {
         const { target, formChange, children } = this.props
-        const field = Children.only(children)
-        return React.cloneElement(field, {
-            onChange: (event, newValue) => {
-                this.isEnabled && formChange(target, newValue)
-            }
+        return React.cloneElement(Children.only(children), {
+            onChange: (event, newValue) => formChange(target, newValue)
         });
     }
 }
 
-@reduxForm({ form: 'replication' })
-@connect(state => {
-    replicationEnabled: formValueSelector('replication')(state, 'copy')
-})
-export default class Replication extends Component {
-    render() {
-        const { replicationEnabled } = this.props
 
-        const renderTextField = ({ replicate, ...props }) => {
-            const children = <TextField fullWidth={true} {...props}/>
-            return replicationEnabled
-                ? children
-                : <ReplicableField target={replicate}>{children}</ReplicableField>
+@reduxForm({ form: 'replication' })
+@connect(state => ({
+    replicationEnabled: formValueSelector('replication')(state, REPLICATION_FLAG_FIELD_NAME),
+    legalAddress: formValueSelector('replication')(state, 'address_legal'),
+}))
+export default class ReplicationExample extends Component {
+
+    static defaultProps = {
+        bidirectional: false,
+    }
+
+    render() {
+        const {
+            bidirectional,
+            replicationEnabled,
+            legalAddress,
+            change,
+        } = this.props
+
+        const replicationsFromTo = ['city', 'street', 'house', 'apartment']
+            .reduce((memo, key) => ({
+                ...memo,
+                [`address_legal.${key}`]: `address_postal.${key}`,
+            }), {})
+
+        // Flip replicationsFromTo around
+        const replicationsToFrom = Object.keys(replicationsFromTo)
+            .reduce((memo, key) => ({
+                ...memo,
+                [replicationsFromTo[key]]: key,
+            }), {})
+
+        const renderTextField = ({ label, name }) => {
+            const field = <TextField fullWidth={true} floatingLabelText={label} name={name} />
+
+            if (replicationEnabled) {
+                if (replicationsFromTo[name]) {
+                    return React.cloneElement(field, {
+                        onChange: (event, newValue) => change(replicationsFromTo[name], newValue)
+                    })
+                }
+                if (replicationsToFrom[name]) {
+                    if (bidirectional) {
+                        return React.cloneElement(field, {
+                            onChange: (event, newValue) => change(replicationsToFrom[name], newValue)
+                        })
+                    } else {
+                        return React.cloneElement(field, {
+                            onChange: (event, newValue) => change('copy', false)
+                        })
+                    }
+                }
+            }
+
+            return field
         }
+
+        const handleReplicationFlagChange = (event, isInputChecked) =>
+            isInputChecked && change('address_postal', legalAddress)
+
         return (
             <form>
-              <Card>
-                <CardText>
-                  <Row>
-                    <Col xs={12} md={6}>
-                      <div style={styles.label}>Legal Address</div>
-                      <renderTextField name="address_legal.city" fullWidth={true} floatingLabelText="City" />
-                      <renderTextField name="address_legal.street" fullWidth={true} floatingLabelText="Street Name" />
-                      <Row>
-                        <Col xs={12} sm={6}>
-                          <renderTextField name="address_legal.house" fullWidth={true} floatingLabelText="House Number" />
-                        </Col>
-                        <Col xs={12} sm={6}>
-                          <renderTextField name="address_legal.apartment" fullWidth={true} floatingLabelText="Apartment Number" />
-                        </Col>
-                      </Row>
-                      <Checkbox name="copy" style={styles.fieldSpacing} label="Legal Address is the same as Postal Address" />
-                    </Col>
-                    <Col xs={12} md={6}>
-                      <div style={styles.label}>Postal Address</div>
-                      <renderTextField name="address_postal.city" fullWidth={true} floatingLabelText="City" />
-                      <renderTextField name="address_postal.street" fullWidth={true} floatingLabelText="Street Name" />
-                      <Row>
-                        <Col xs={12} sm={6}>
-                          <renderTextField name="address_postal.house" fullWidth={true} floatingLabelText="House Number" />
-                        </Col>
-                        <Col xs={12} sm={6}>
-                          <renderTextField name="address_postal.apartment" fullWidth={true} floatingLabelText="Apartment Number" />
-                        </Col>
-                      </Row>
-                    </Col>
-                  </Row>
-                </CardText>
-              </Card>
+                <Card>
+                    <CardText>
+                        <Row>
+                            <Col xs={12} md={6}>
+                                <div style={styles.label}>Legal Address</div>
+                                {renderTextField({ name: 'address_legal.city', label: 'City' })}
+                                {renderTextField({ name: 'address_legal.street', label: 'Street Name' })}
+                                <Row>
+                                    <Col xs={12} sm={6}>
+                                        {renderTextField({ name: 'address_legal.house', label: 'House Number' })}
+                                    </Col>
+                                    <Col xs={12} sm={6}>
+                                        {renderTextField({
+                                            name: 'address_legal.apartment',
+                                            label: 'Apartment Number'
+                                        })}
+                                    </Col>
+                                </Row>
+                                <Checkbox name="copy" style={styles.fieldSpacing}
+                                          label="Legal Address is the same as Postal Address"
+                                          onChange={handleReplicationFlagChange}/>
+                            </Col>
+                            <Col xs={12} md={6}>
+                                <div style={styles.label}>Postal Address</div>
+                                {renderTextField({ name: 'address_postal.city', label: 'City' })}
+                                {renderTextField({ name: 'address_postal.street', label: 'Street Name' })}
+                                <Row>
+                                    <Col xs={12} sm={6}>
+                                        {renderTextField({ name: 'address_postal.house', label: 'House Number' })}
+                                    </Col>
+                                    <Col xs={12} sm={6}>
+                                        {renderTextField({
+                                            name: 'address_postal.apartment',
+                                            label: 'Apartment Number'
+                                        })}
+                                    </Col>
+                                </Row>
+                            </Col>
+                        </Row>
+                    </CardText>
+                </Card>
             </form>
         )
     }

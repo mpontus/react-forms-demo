@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Divider, Toggle } from 'material-ui'
+import { Toggle } from 'material-ui'
 import Form from './Form'
 
 export default class extends Component {
